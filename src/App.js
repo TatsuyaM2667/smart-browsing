@@ -1,25 +1,184 @@
-import logo from './logo.svg';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import './App.css';
+import HistoryPage from './pages/HistoryPage';
+import HomePage from './pages/HomePage';
+import TabHeader from './components/TabHeader';
 
-function App() {
+// プリロードスクリプト経由で公開されたAPIを使用
+const { electronAPI } = window;
+
+function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, handleGoBack, canGoForward, handleGoForward, handleReload, showHomePage }) {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="browser-content-container">
+      <div className="nav-bar">
+        <div className="nav-buttons">
+          <button onClick={handleGoBack} disabled={!canGoBack}>
+            Back
+          </button>
+          <button onClick={handleGoForward} disabled={!canGoForward}>
+            Forward
+          </button>
+          <button onClick={handleReload}>Reload</button>
+        </div>
+        <form onSubmit={handleNavigate} className="address-bar-form">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className="address-bar"
+            placeholder="https:// or search on Google"
+          />
+        </form>
+        <Link to="/history" className="history-button">History</Link>
+      </div>
+      {showHomePage && <HomePage onSearch={(value) => handleNavigate({ preventDefault: () => {}, target: { value: value } })} />} {/* HomePageにonSearchを渡す */}
     </div>
   );
 }
 
-export default App;
+function App() {
+  const location = useLocation();
+  const [tabs, setTabs] = useState([]);
+  const [activeTabId, setActiveTabId] = useState(null);
+  const [inputValue, setInputValue] = useState('');
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
+  const [showHomePage, setShowHomePage] = useState(false); // HomePageの表示状態
+
+  // 初期タブのロードとイベントリスナーの設定
+  useEffect(() => {
+    const fetchTabs = async () => {
+      const fetchedTabs = await electronAPI.getTabs();
+      setTabs(fetchedTabs);
+      const active = fetchedTabs.find(tab => tab.isActive);
+      if (active) {
+        setActiveTabId(active.id);
+        // about:blankの場合はinputValueを空にする
+        setInputValue(active.url === 'about:blank' ? '' : active.url);
+        setShowHomePage(active.url === 'about:blank');
+      }
+    };
+
+    fetchTabs();
+
+    // メインプロセスからのイベントリスナー
+    electronAPI.onTabUpdated((data) => {
+      setTabs(prevTabs => prevTabs.map(tab => 
+        tab.id === data.tabId ? { ...tab, title: data.title, url: data.url } : tab
+      ));
+      if (data.tabId === activeTabId) {
+        // about:blankの場合はinputValueを空にする
+        setInputValue(data.url === 'about:blank' ? '' : data.url);
+        setShowHomePage(data.url === 'about:blank');
+      }
+    });
+
+    electronAPI.onActiveTabChanged((tabId) => {
+      setActiveTabId(tabId);
+      const active = tabs.find(tab => tab.id === tabId);
+      if (active) {
+        // about:blankの場合はinputValueを空にする
+        setInputValue(active.url === 'about:blank' ? '' : active.url);
+        setShowHomePage(active.url === 'about:blank');
+      }
+    });
+
+    electronAPI.onTabClosed((tabId) => {
+      setTabs(prevTabs => prevTabs.filter(tab => tab.id !== tabId));
+    });
+
+    electronAPI.on('update-navigation-state', (navState) => {
+      setCanGoBack(navState.canGoBack);
+      setCanGoForward(navState.canGoForward);
+    });
+
+    return () => {
+      electronAPI.removeAllListeners('tab-updated');
+      electronAPI.removeAllListeners('active-tab-changed');
+      electronAPI.removeAllListeners('tab-closed');
+      electronAPI.removeAllListeners('update-navigation-state');
+    };
+  }, [activeTabId, tabs]);
+
+  // ルート変更時のBrowserView表示/非表示
+  useEffect(() => {
+    console.log(`App.js: location.pathname changed to ${location.pathname}`);
+    console.log(`App.js: showHomePage is ${showHomePage}`);
+    if (location.pathname === '/history') {
+      electronAPI.setBrowserViewVisibility(false); // 履歴ページでは非表示
+    } else {
+      // ホームページ表示中はBrowserViewを非表示
+      electronAPI.setBrowserViewVisibility(!showHomePage);
+    }
+  }, [location.pathname, showHomePage]);
+
+  const handleNavigate = (e) => {
+    e.preventDefault();
+    electronAPI.send('navigate', inputValue);
+  };
+
+  const handleGoBack = () => {
+    electronAPI.send('go-back');
+  };
+
+  const handleGoForward = () => {
+    electronAPI.send('go-forward');
+  };
+
+  const handleReload = () => {
+    electronAPI.send('reload');
+  };
+
+  const handleNewTab = () => {
+    electronAPI.newTab();
+  };
+
+  const handleSwitchTab = (tabId) => {
+    electronAPI.switchTab(tabId);
+  };
+
+  const handleCloseTab = (tabId) => {
+    electronAPI.closeTab(tabId);
+  };
+
+  return (
+    <div className="main-container">
+      <div className="tab-bar">
+        {tabs.map(tab => (
+          <TabHeader 
+            key={tab.id} 
+            tab={tab} 
+            onSwitchTab={handleSwitchTab} 
+            onCloseTab={handleCloseTab} 
+          />
+        ))}
+        <button onClick={handleNewTab} className="new-tab-button">+</button>
+      </div>
+      <Routes>
+        <Route path="/" element={
+          <BrowserContent 
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            handleNavigate={handleNavigate}
+            canGoBack={canGoBack}
+            handleGoBack={handleGoBack}
+            canGoForward={canGoForward}
+            handleGoForward={handleGoForward}
+            handleReload={handleReload}
+            showHomePage={showHomePage}
+          />
+        } />
+        <Route path="/history" element={<HistoryPage />} />
+      </Routes>
+    </div>
+  );
+}
+
+export default function AppWrapper() {
+  return (
+    <Router>
+      <App />
+    </Router>
+  );
+}

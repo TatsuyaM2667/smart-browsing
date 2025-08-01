@@ -1,38 +1,118 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.main-container {
   display: flex;
   flex-direction: column;
+  height: 100vh; /* 全画面を占める */
+}
+
+.tab-bar {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  background-color: #e0e0e0;
+  padding: 5px 10px;
+  border-bottom: 1px solid #ccc;
 }
 
-.App-link {
-  color: #61dafb;
+.tab-header {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  margin-right: 5px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+  cursor: pointer;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.tab-header.active {
+  background-color: #fff;
+  border-color: #aaa;
+  border-bottom: none;
+}
+
+.tab-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px; /* タブのタイトルが長すぎる場合に省略 */
+}
+
+.close-tab-button {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-tab-button:hover {
+  color: #333;
+}
+
+.new-tab-button {
+  padding: 5px 10px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.browser-content-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* 残りのスペースを占める */
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #ccc;
+  justify-content: center; /* 中央寄せ */
+}
+
+.nav-buttons {
+  display: flex;
+  margin-right: 20px; /* ボタンとアドレスバーの間にスペース */
+}
+
+.nav-bar button {
+  margin-right: 10px;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.nav-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.address-bar-form {
+  flex-grow: 0; /* flex-growを無効化 */
+  width: 60%; /* 幅を固定 */
+  max-width: 800px; /* 最大幅を設定 */
+}
+
+.address-bar {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.history-button {
+  margin-left: 20px;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background-color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  color: black;
 }
