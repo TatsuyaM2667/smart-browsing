@@ -1,7 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const { electronAPI } = window;
 
 function HomePage({ onSearch }) {
   const [searchInputValue, setSearchInputValue] = useState(''); // ローカルな入力状態
+  const [bookmarks, setBookmarks] = useState([]);
+
+  useEffect(() => {
+    const fetchBookmarks = async () => {
+      const fetchedBookmarks = await electronAPI.getBookmarks();
+      setBookmarks(fetchedBookmarks);
+    };
+    fetchBookmarks();
+  }, []);
 
   const handleNavigate = (e) => {
     e.preventDefault();
@@ -10,37 +21,36 @@ function HomePage({ onSearch }) {
     }
   };
 
+  const handleBookmarkClick = (url) => {
+    onSearch(url);
+  };
+
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: 'calc(100vh - 60px)', // ナビゲーションバーの高さを考慮
-      backgroundColor: '#f5f5f5',
-    }}>
-      <h1 style={{ marginBottom: '30px', color: '#333' }}>Smart Browser</h1>
-      <form onSubmit={handleNavigate} style={{
-        width: '80%',
-        maxWidth: '600px',
-      }}>
+    <div className="homepage-container">
+      <h1 className="homepage-title">Smart Browser</h1>
+      <form onSubmit={handleNavigate} className="homepage-form">
         <input
           type="text"
           value={searchInputValue}
           onChange={(e) => setSearchInputValue(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '10px 15px',
-            fontSize: '1.2em',
-            border: '1px solid #ccc',
-            borderRadius: '25px',
-            boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-            outline: 'none',
-            textAlign: 'center',
-          }}
+          className="homepage-input"
           placeholder="Search or type URL"
         />
       </form>
+
+      {bookmarks.length > 0 && (
+        <div className="bookmarks-section">
+          <h2>Bookmarks</h2>
+          <div className="bookmarks-grid">
+            {bookmarks.map((bookmark, index) => (
+              <div key={index} className="bookmark-item" onClick={() => handleBookmarkClick(bookmark.url)}>
+                <p className="bookmark-title">{bookmark.title || bookmark.url}</p>
+                <p className="bookmark-url">{bookmark.url}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

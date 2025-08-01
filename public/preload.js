@@ -29,6 +29,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onTabUpdated: (callback) => ipcRenderer.on('tab-updated', (event, data) => callback(data)),
   onActiveTabChanged: (callback) => ipcRenderer.on('active-tab-changed', (event, tabId) => callback(tabId)),
   onTabClosed: (callback) => ipcRenderer.on('tab-closed', (event, tabId) => callback(tabId)),
+
+  // ブックマーク関連API
+  addBookmark: (url, title) => ipcRenderer.invoke('add-bookmark', url, title),
+  removeBookmark: (url) => ipcRenderer.invoke('remove-bookmark', url),
+  isBookmarked: (url) => ipcRenderer.invoke('is-bookmarked', url),
+  getBookmarks: () => ipcRenderer.invoke('get-bookmarks'),
 });
 
 console.log('preload.js: Script finished');

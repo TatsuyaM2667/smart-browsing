@@ -8,7 +8,12 @@ import TabHeader from './components/TabHeader';
 // プリロードスクリプト経由で公開されたAPIを使用
 const { electronAPI } = window;
 
-function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, handleGoBack, canGoForward, handleGoForward, handleReload, showHomePage }) {
+function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, handleGoBack, canGoForward, handleGoForward, handleReload, showHomePage, isBookmarked, handleBookmarkToggle }) {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleNavigate(inputValue);
+  };
+
   return (
     <div className="browser-content-container">
       <div className="nav-bar">
@@ -21,7 +26,7 @@ function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, 
           </button>
           <button onClick={handleReload}>Reload</button>
         </div>
-        <form onSubmit={handleNavigate} className="address-bar-form">
+        <form onSubmit={handleSubmit} className="address-bar-form">
           <input
             type="text"
             value={inputValue}
@@ -30,9 +35,12 @@ function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, 
             placeholder="https:// or search on Google"
           />
         </form>
+        <button onClick={handleBookmarkToggle} className="bookmark-button">
+          {isBookmarked ? '★' : '☆'} {/* ブックマークの状態に応じて表示を切り替え */}
+        </button>
         <Link to="/history" className="history-button">History</Link>
       </div>
-      {showHomePage && <HomePage onSearch={(value) => handleNavigate({ preventDefault: () => {}, target: { value: value } })} />} {/* HomePageにonSearchを渡す */}
+      {showHomePage && <HomePage onSearch={(value) => handleNavigate(value)} />} {/* HomePageにonSearchを渡す */}
     </div>
   );
 }
@@ -45,6 +53,7 @@ function App() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [showHomePage, setShowHomePage] = useState(false); // HomePageの表示状態
+  const [isBookmarked, setIsBookmarked] = useState(false); // ブックマーク状態
 
   // 初期タブのロードとイベントリスナーの設定
   useEffect(() => {
@@ -57,6 +66,7 @@ function App() {
         // about:blankの場合はinputValueを空にする
         setInputValue(active.url === 'about:blank' ? '' : active.url);
         setShowHomePage(active.url === 'about:blank');
+        checkBookmarkStatus(active.url); // ブックマーク状態を確認
       }
     };
 
@@ -71,6 +81,7 @@ function App() {
         // about:blankの場合はinputValueを空にする
         setInputValue(data.url === 'about:blank' ? '' : data.url);
         setShowHomePage(data.url === 'about:blank');
+        checkBookmarkStatus(data.url); // ブックマーク状態を確認
       }
     });
 
@@ -81,6 +92,7 @@ function App() {
         // about:blankの場合はinputValueを空にする
         setInputValue(active.url === 'about:blank' ? '' : active.url);
         setShowHomePage(active.url === 'about:blank');
+        checkBookmarkStatus(active.url); // ブックマーク状態を確認
       }
     });
 
@@ -91,6 +103,7 @@ function App() {
     electronAPI.on('update-navigation-state', (navState) => {
       setCanGoBack(navState.canGoBack);
       setCanGoForward(navState.canGoForward);
+      checkBookmarkStatus(navState.url); // ナビゲーション状態更新時にもブックマーク状態を確認
     });
 
     return () => {
@@ -100,6 +113,27 @@ function App() {
       electronAPI.removeAllListeners('update-navigation-state');
     };
   }, [activeTabId, tabs]);
+
+  // ブックマーク状態を確認する関数
+  const checkBookmarkStatus = async (url) => {
+    const bookmarked = await electronAPI.isBookmarked(url);
+    setIsBookmarked(bookmarked);
+  };
+
+  // ブックマークの追加/削除を切り替える関数
+  const handleBookmarkToggle = async () => {
+    const currentUrl = inputValue;
+    const activeTab = tabs.find(tab => tab.id === activeTabId);
+    const currentTitle = activeTab ? activeTab.title : currentUrl;
+
+    if (isBookmarked) {
+      await electronAPI.removeBookmark(currentUrl);
+      setIsBookmarked(false);
+    } else {
+      await electronAPI.addBookmark(currentUrl, currentTitle);
+      setIsBookmarked(true);
+    }
+  };
 
   // ルート変更時のBrowserView表示/非表示
   useEffect(() => {
@@ -113,9 +147,9 @@ function App() {
     }
   }, [location.pathname, showHomePage]);
 
-  const handleNavigate = (e) => {
-    e.preventDefault();
-    electronAPI.send('navigate', inputValue);
+  const handleNavigate = (urlToNavigate) => {
+    console.log(`App.js: Sending navigation request for: ${urlToNavigate}`);
+    electronAPI.send('navigate', urlToNavigate);
   };
 
   const handleGoBack = () => {
@@ -167,6 +201,8 @@ function App() {
             handleGoForward={handleGoForward}
             handleReload={handleReload}
             showHomePage={showHomePage}
+            isBookmarked={isBookmarked}
+            handleBookmarkToggle={handleBookmarkToggle}
           />
         } />
         <Route path="/history" element={<HistoryPage />} />

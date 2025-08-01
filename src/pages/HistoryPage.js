@@ -28,17 +28,17 @@ function HistoryPage() {
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="history-page-container">
       <h1>History</h1>
       <button onClick={handleClearHistory}>Clear History</button>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul className="history-list">
         {history.map((entry, index) => (
-          <li key={index} style={{ marginBottom: '10px', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>
-            <a href="#" onClick={() => handleNavigateToUrl(entry.url)} style={{ color: 'blue', textDecoration: 'underline' }}>
+          <li key={index} className="history-list-item">
+            <a href="#" onClick={() => handleNavigateToUrl(entry.url)}>
               {entry.title || entry.url}
             </a>
-            <p style={{ fontSize: '0.8em', color: '#666' }}>{entry.url}</p>
-            <p style={{ fontSize: '0.7em', color: '#999' }}>{new Date(entry.timestamp).toLocaleString()}</p>
+            <p>{entry.url}</p>
+            <p>{new Date(entry.timestamp).toLocaleString()}</p>
           </li>
         ))}
       </ul>

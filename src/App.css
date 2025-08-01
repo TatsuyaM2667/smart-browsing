@@ -116,3 +116,124 @@
   text-decoration: none;
   color: black;
 }
+
+.bookmark-button {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: gold; /* ブックマークアイコンの色 */
+  margin-left: 10px;
+}
+
+/* HomePage Styles */
+.homepage-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 60px); /* ナビゲーションバーの高さを考慮 */
+  background-color: #f5f5f5;
+}
+
+.homepage-title {
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.homepage-form {
+  width: 80%;
+  max-width: 600px;
+}
+
+.homepage-input {
+  width: 100%;
+  padding: 10px 15px;
+  font-size: 1.2em;
+  border: 1px solid #ccc;
+  border-radius: 25px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  outline: none;
+  text-align: center;
+}
+
+/* HistoryPage Styles */
+.history-page-container {
+  padding: 20px;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+}
+
+.history-list-item {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.history-list-item a {
+  color: blue;
+  text-decoration: underline;
+}
+
+.history-list-item p {
+  font-size: 0.8em;
+  color: #666;
+}
+
+.history-list-item p:last-child {
+  font-size: 0.7em;
+  color: #999;
+}
+
+.bookmarks-section {
+  margin-top: 40px;
+  width: 80%;
+  max-width: 600px;
+  text-align: center;
+}
+
+.bookmarks-section h2 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.bookmarks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.bookmark-item {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.bookmark-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.bookmark-title {
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookmark-url {
+  font-size: 0.9em;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
