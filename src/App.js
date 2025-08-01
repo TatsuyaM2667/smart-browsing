@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import './App.css';
 import HistoryPage from './pages/HistoryPage';
 import HomePage from './pages/HomePage';
@@ -8,10 +8,33 @@ import TabHeader from './components/TabHeader';
 // プリロードスクリプト経由で公開されたAPIを使用
 const { electronAPI } = window;
 
-function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, handleGoBack, canGoForward, handleGoForward, handleReload, showHomePage, isBookmarked, handleBookmarkToggle }) {
+function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, handleGoBack, canGoForward, handleGoForward, handleReload, showHomePage, isBookmarked, handleBookmarkToggle, setIsTyping, typingTimeoutRef }) {
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (typeof setIsTyping === 'function') {
+      setIsTyping(false); // 入力終了
+    } else {
+      console.error("setIsTyping is not a function in handleSubmit!");
+    }
     handleNavigate(inputValue);
+  };
+
+
+  const handleInputChange = (e) => {
+    if (typeof setIsTyping === 'function') {
+      setIsTyping(true); // 入力開始
+      // Clear any existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      // Set a new timeout to set isTyping to false after a delay
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+      }, 500); // Adjust delay as needed
+    } else {
+      console.error("setIsTyping is not a function in handleInputChange!");
+    }
+    setInputValue(e.target.value);
   };
 
   return (
@@ -30,7 +53,7 @@ function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, 
           <input
             type="text"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
             className="address-bar"
             placeholder="https:// or search on Google"
           />
@@ -45,7 +68,7 @@ function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, 
   );
 }
 
-function App() {
+export default function App() {
   const location = useLocation();
   const [tabs, setTabs] = useState([]);
   const [activeTabId, setActiveTabId] = useState(null);
@@ -54,6 +77,35 @@ function App() {
   const [canGoForward, setCanGoForward] = useState(false);
   const [showHomePage, setShowHomePage] = useState(false); // HomePageの表示状態
   const [isBookmarked, setIsBookmarked] = useState(false); // ブックマーク状態
+  const [isTyping, setIsTyping] = useState(false); // ユーザーがアドレスバーに入力中かどうか
+  const typingTimeoutRef = useRef(null); // For debouncing isTyping
+  const tabBarRef = useRef(null);
+  const navBarRef = useRef(null);
+  const [theme, setTheme] = useState(() => {
+    // localStorageからテーマを読み込む。なければ'light'をデフォルトとする
+    return localStorage.getItem('theme') || 'light';
+  });
+
+  // UI要素の高さを計算してメインプロセスに送信
+  useEffect(() => {
+    if (tabBarRef.current && navBarRef.current) {
+      const totalHeight = tabBarRef.current.offsetHeight + navBarRef.current.offsetHeight;
+      console.log(`App.js: UI total height: ${totalHeight}px`);
+      electronAPI.send('set-ui-height', totalHeight);
+    }
+  }, [tabs, activeTabId, location.pathname]); // tabs, activeTabId, location.pathname の変更時に再計算
+
+  // テーマが変更されたときにbodyにクラスを適用し、localStorageに保存
+  useEffect(() => {
+    document.body.className = theme;
+    console.log(`App.js: Theme changed to ${theme}, body class set to ${document.body.className}`);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  // テーマを切り替える関数
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
 
   // 初期タブのロードとイベントリスナーの設定
   useEffect(() => {
@@ -78,8 +130,10 @@ function App() {
         tab.id === data.tabId ? { ...tab, title: data.title, url: data.url } : tab
       ));
       if (data.tabId === activeTabId) {
-        // about:blankの場合はinputValueを空にする
-        setInputValue(data.url === 'about:blank' ? '' : data.url);
+        // ユーザーが入力中の場合はinputValueを更新しない
+        if (!isTyping) {
+          setInputValue(data.url === 'about:blank' ? '' : data.url);
+        }
         setShowHomePage(data.url === 'about:blank');
         checkBookmarkStatus(data.url); // ブックマーク状態を確認
       }
@@ -89,8 +143,10 @@ function App() {
       setActiveTabId(tabId);
       const active = tabs.find(tab => tab.id === tabId);
       if (active) {
-        // about:blankの場合はinputValueを空にする
-        setInputValue(active.url === 'about:blank' ? '' : active.url);
+        // ユーザーが入力中の場合はinputValueを更新しない
+        if (!isTyping) {
+          setInputValue(active.url === 'about:blank' ? '' : active.url);
+        }
         setShowHomePage(active.url === 'about:blank');
         checkBookmarkStatus(active.url); // ブックマーク状態を確認
       }
@@ -112,7 +168,7 @@ function App() {
       electronAPI.removeAllListeners('tab-closed');
       electronAPI.removeAllListeners('update-navigation-state');
     };
-  }, [activeTabId, tabs]);
+  }, [activeTabId, tabs, isTyping]);
 
   // ブックマーク状態を確認する関数
   const checkBookmarkStatus = async (url) => {
@@ -139,12 +195,9 @@ function App() {
   useEffect(() => {
     console.log(`App.js: location.pathname changed to ${location.pathname}`);
     console.log(`App.js: showHomePage is ${showHomePage}`);
-    if (location.pathname === '/history') {
-      electronAPI.setBrowserViewVisibility(false); // 履歴ページでは非表示
-    } else {
-      // ホームページ表示中はBrowserViewを非表示
-      electronAPI.setBrowserViewVisibility(!showHomePage);
-    }
+    const isBrowserViewVisible = location.pathname !== '/history' && !showHomePage;
+    console.log(`App.js: Setting BrowserView visibility to ${isBrowserViewVisible}`);
+    electronAPI.setBrowserViewVisibility(isBrowserViewVisible);
   }, [location.pathname, showHomePage]);
 
   const handleNavigate = (urlToNavigate) => {
@@ -188,6 +241,9 @@ function App() {
           />
         ))}
         <button onClick={handleNewTab} className="new-tab-button">+</button>
+        <button onClick={toggleTheme} className="theme-toggle-button">
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
       </div>
       <Routes>
         <Route path="/" element={
@@ -203,6 +259,8 @@ function App() {
             showHomePage={showHomePage}
             isBookmarked={isBookmarked}
             handleBookmarkToggle={handleBookmarkToggle}
+            setIsTyping={setIsTyping}
+            typingTimeoutRef={typingTimeoutRef}
           />
         } />
         <Route path="/history" element={<HistoryPage />} />
@@ -211,10 +269,4 @@ function App() {
   );
 }
 
-export default function AppWrapper() {
-  return (
-    <Router>
-      <App />
-    </Router>
-  );
-}
+
