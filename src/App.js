@@ -19,12 +19,12 @@ function BrowserContent({ inputValue, setInputValue, handleNavigate, canGoBack, 
       <div className="nav-bar">
         <div className="nav-buttons">
           <button onClick={handleGoBack} disabled={!canGoBack}>
-            Back
+            ←
           </button>
           <button onClick={handleGoForward} disabled={!canGoForward}>
-            Forward
+            →
           </button>
-          <button onClick={handleReload}>Reload</button>
+          <button onClick={handleReload}>↻</button>
         </div>
         <form onSubmit={handleSubmit} className="address-bar-form">
           <input

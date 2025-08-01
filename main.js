@@ -162,19 +162,35 @@ function closeTab(tabId) {
   if (views.has(tabId)) {
     const viewToClose = views.get(tabId);
     views.delete(tabId);
-    viewToClose.destroy();
 
+    // 閉じようとしているタブがアクティブな場合
     if (activeViewId === tabId) {
+      mainWindow.setBrowserView(null); // 現在のBrowserViewをウィンドウからデタッチ
+
+      // BrowserViewを破棄
+      if (viewToClose && typeof viewToClose.destroy === 'function') {
+        viewToClose.destroy();
+      } else {
+        console.error(`Error: viewToClose is not a valid BrowserView object or destroy method is missing for tabId: ${tabId}`);
+      }
+
+      // アクティブタブの切り替えまたは新しいタブの作成
       if (views.size > 0) {
         const newActiveTabId = views.keys().next().value;
         switchTab(newActiveTabId);
       } else {
-        activeViewId = null;
-        // 全てのタブが閉じた場合、新しいタブを自動で作成し、ホームページを表示
+        activeViewId = null; // activeViewIdをリセット
         createTabAndSwitch('about:blank'); // 新しいタブは空白ページから開始
       }
+    } else {
+      // 閉じようとしているタブがアクティブでない場合、単に破棄
+      if (viewToClose && typeof viewToClose.destroy === 'function') {
+        viewToClose.destroy();
+      } else {
+        console.error(`Error: viewToClose is not a valid BrowserView object or destroy method is missing for tabId: ${tabId}`);
+      }
     }
-    sendTabClosed(tabId);
+    sendTabClosed(tabId); // レンダラープロセスにタブが閉じたことを通知
   }
 }
 
