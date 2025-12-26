@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Google Sign-In</title>
+</head>
+<body>
+    <div id="message">Loading Google Sign-In...</div>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script>
+        // This script runs inside the temporary authentication window.
+        // It relies on a preload script to provide firebaseConfig.
+        document.addEventListener('DOMContentLoaded', async () => {
+            const messageDiv = document.getElementById('message');
+            try {
+                if (!window.electronAPI || !window.electronAPI.getFirebaseConfig) {
+                    messageDiv.innerText = 'Electron API or Firebase config not available.';
+                    console.error('Electron API or Firebase config not available in auth window.');
+                    return;
+                }
+
+                const firebaseConfig = await window.electronAPI.getFirebaseConfig();
+                if (!firebaseConfig || !firebaseConfig.apiKey) {
+                    messageDiv.innerText = 'Firebase configuration missing.';
+                    console.error('Firebase configuration missing in auth window.');
+                    return;
+                }
+
+                const app = firebase.initializeApp(firebaseConfig, "electronGoogleAuth");
+                const auth = firebase.auth();
+                const provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+
+                const result = await firebase.auth().getRedirectResult();
+                if (result && result.user) {
+                    messageDiv.innerText = 'Signed in successfully. Closing window...';
+                    if (window.electronAPI && window.electronAPI.googleSignInSuccessInAuthWindow) {
+                        window.electronAPI.googleSignInSuccessInAuthWindow(result.user);
+                    }
+                } else {
+                    messageDiv.innerText = 'Redirecting to Google for sign-in...';
+                    await firebase.auth().signInWithRedirect(provider);
+                }
+            } catch (error) {
+                messageDiv.innerText = `Error: ${error.message}`;
+                console.error('Error during Google sign-in in auth window:', error);
+                if (window.electronAPI && window.electronAPI.googleSignInErrorInAuthWindow) {
+                    window.electronAPI.googleSignInErrorInAuthWindow(error.message);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
